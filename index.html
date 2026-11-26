@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>100マス 倍数もようメーカー</title>
+  <title>倍数もようメーカー（10×10 / 100×100）</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Meiryo", sans-serif;
       margin: 0;
-      padding: 24px 16px 40px;
+      padding: 20px 14px 40px;
       background: #f8fafc;
       color: #0f172a;
       text-align: center;
@@ -18,8 +18,31 @@
       margin: 0 auto;
     }
     h1 {
-      font-size: 1.5rem;
+      font-size: 1.45rem;
+      margin-bottom: 14px;
+    }
+    .tabs {
+      display: inline-flex;
+      background: #e2e8f0;
+      padding: 4px;
+      border-radius: 12px;
+      gap: 4px;
       margin-bottom: 16px;
+    }
+    .tab-btn {
+      padding: 8px 14px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 9px;
+      background: transparent;
+      color: #334155;
+      cursor: pointer;
+    }
+    .tab-btn.active {
+      background: #ffffff;
+      color: #1d4ed8;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
     }
     .controls {
       display: flex;
@@ -29,16 +52,15 @@
       margin-bottom: 14px;
     }
     .coef-btn {
-      width: 44px;
-      height: 44px;
-      font-size: 1.1rem;
+      width: 42px;
+      height: 42px;
+      font-size: 1.05rem;
       font-weight: bold;
       border: 2px solid #cbd5e1;
       border-radius: 10px;
       background: #ffffff;
       color: #1e293b;
       cursor: pointer;
-      transition: all 0.15s ease;
     }
     .coef-btn.active {
       background: #2563eb;
@@ -46,11 +68,17 @@
       color: #ffffff;
     }
     .status {
-      margin-bottom: 14px;
-      font-size: 1rem;
+      margin-bottom: 12px;
+      font-size: 0.98rem;
       font-weight: 600;
     }
-    .grid {
+    .panel {
+      display: none;
+    }
+    .panel.active {
+      display: block;
+    }
+    .grid-10 {
       display: grid;
       grid-template-columns: repeat(10, 1fr);
       gap: 6px;
@@ -59,7 +87,7 @@
       border-radius: 14px;
       box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
     }
-    .cell {
+    .cell-10 {
       aspect-ratio: 1 / 1;
       display: flex;
       align-items: center;
@@ -71,104 +99,126 @@
       background: #ffffff;
       color: #475569;
       cursor: pointer;
-      user-select: none;
-      -webkit-tap-highlight-color: transparent;
-      transition: transform 0.12s ease, background-color 0.15s ease, box-shadow 0.15s ease;
     }
-    .cell:hover {
-      border-color: #94a3b8;
-    }
-    .cell.multiple {
+    .cell-10.multiple {
       background: #fef08a;
       border-color: #eab308;
       color: #1e3a8a;
       font-weight: 800;
     }
-    .cell.selected {
+    .cell-10.selected {
       outline: 3px solid #2563eb;
       outline-offset: 1px;
-      transform: scale(1.06);
-      z-index: 2;
-      box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
     }
     .detail-card {
-      margin-top: 16px;
+      margin-top: 14px;
       background: #ffffff;
       border: 2px solid #dbeafe;
       border-radius: 12px;
-      padding: 14px 16px;
+      padding: 12px 14px;
       text-align: left;
-      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
     }
     .detail-card.is-multiple {
       background: #fefce8;
       border-color: #facc15;
     }
     .detail-title {
-      font-size: 1.1rem;
+      font-size: 1.05rem;
       font-weight: 800;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
       color: #1e3a8a;
     }
     .detail-body {
-      font-size: 0.95rem;
-      line-height: 1.6;
+      font-size: 0.92rem;
+      line-height: 1.55;
       color: #334155;
     }
-    .hint {
-      margin-top: 12px;
-      font-size: 0.9rem;
-      color: #475569;
+    .canvas-wrap {
       background: #ffffff;
-      padding: 12px 16px;
-      border-radius: 10px;
-      border: 1px solid #e2e8f0;
+      padding: 12px;
+      border-radius: 14px;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+    }
+    canvas#patternCanvas {
+      width: 100%;
+      max-width: 500px;
+      aspect-ratio: 1 / 1;
+      display: block;
+      margin: 0 auto;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      touch-action: manipulation;
+    }
+    .canvas-info {
+      margin-top: 10px;
+      font-size: 0.9rem;
+      color: #334155;
+      line-height: 1.5;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>100マス 倍数もようメーカー</h1>
+    <h1>倍数もようメーカー</h1>
+
+    <div class="tabs" role="tablist">
+      <button type="button" class="tab-btn active" data-tab="grid10">10×10（1〜100）</button>
+      <button type="button" class="tab-btn" data-tab="grid100">100×100（1〜10,000）</button>
+    </div>
+
     <div class="controls" id="coefButtons" aria-label="係数の選択"></div>
     <div class="status" id="statusText"></div>
-    <div class="grid" id="grid100" aria-label="1から100までの10×10マス"></div>
 
-    <div class="detail-card" id="detailCard">
-      <div class="detail-title" id="detailTitle">マスをタップしてみよう！</div>
-      <div class="detail-body" id="detailBody">
-        気になる数字をタップすると、掛け算の式や、えらんだ数の倍数かどうかがここに表示されます。
+    <!-- タブ1: 10x10 -->
+    <div class="panel active" id="panel-grid10">
+      <div class="grid-10" id="grid10"></div>
+      <div class="detail-card" id="detailCard">
+        <div class="detail-title" id="detailTitle">マスをタップしてみよう！</div>
+        <div class="detail-body" id="detailBody">
+          気になる数字をタップすると、掛け算の式や倍数かどうかが表示されます。
+        </div>
       </div>
     </div>
 
-    <div class="hint" id="hintText"></div>
+    <!-- タブ2: 100x100 -->
+    <div class="panel" id="panel-grid100">
+      <div class="canvas-wrap">
+        <canvas id="patternCanvas" width="500" height="500"></canvas>
+        <div class="canvas-info" id="canvasInfo">
+          左上から右へ 1, 2, 3… と 10,000 までならんでいます（数字は省略して模様を表示）。タップするとその場所の番号と式が出ます。
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
-    const hints = {
-      1: "1の倍数はぜんぶ（100こ）！すべてのマスが光ります。",
-      2: "2の倍数はたての列が1列おきにならぶ、しましまもようです。",
-      3: "3の倍数はななめにながれるもようになります。",
-      4: "4の倍数は2の倍数よりとびとびになり、ななめやたての規則が見えてきます。",
-      5: "5の倍数は一の位が「5」と「0」のたて2列にそろいます！",
-      6: "6の倍数は2の倍数でもあり、3の倍数でもある数です。",
-      7: "7の倍数はななめにずれていく、ちょっとめずらしいもようです。",
-      8: "8の倍数は100までに12こあります。8×8＝64、8×9＝72などを探してみよう！",
-      9: "9の倍数は一の位が1ずつへり、十の位が1ずつふえる規則があります（9, 18, 27…）。",
-      10: "10の倍数は一番みぎのたて1列にまっすぐならびます！"
-    };
-
     let currentCoef = 3;
-    let selectedNumber = null;
+    let currentTab = "grid10";
+    let selectedNumber10 = null;
+    let selectedNumber100 = null;
 
     const coefButtonsEl = document.getElementById("coefButtons");
-    const gridEl = document.getElementById("grid100");
     const statusEl = document.getElementById("statusText");
+    const grid10El = document.getElementById("grid10");
     const detailCardEl = document.getElementById("detailCard");
     const detailTitleEl = document.getElementById("detailTitle");
     const detailBodyEl = document.getElementById("detailBody");
-    const hintEl = document.getElementById("hintText");
+    const canvas = document.getElementById("patternCanvas");
+    const ctx = canvas.getContext("2d");
+    const canvasInfoEl = document.getElementById("canvasInfo");
 
-    function buildControls() {
+    document.querySelectorAll(".tab-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        currentTab = btn.dataset.tab;
+        document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+        document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById(`panel-${currentTab}`).classList.add("active");
+        updateAll();
+      });
+    });
+
+    function buildCoefButtons() {
       for (let i = 1; i <= 10; i++) {
         const btn = document.createElement("button");
         btn.type = "button";
@@ -176,93 +226,129 @@
         btn.textContent = i;
         btn.addEventListener("click", () => {
           currentCoef = i;
-          updateActiveButton();
-          renderGrid();
-          renderDetail();
+          updateAll();
         });
         coefButtonsEl.appendChild(btn);
       }
     }
 
-    function updateActiveButton() {
-      const buttons = coefButtonsEl.querySelectorAll(".coef-btn");
-      buttons.forEach((btn, idx) => {
+    function updateCoefButtons() {
+      coefButtonsEl.querySelectorAll(".coef-btn").forEach((btn, idx) => {
         btn.classList.toggle("active", idx + 1 === currentCoef);
       });
     }
 
-    function renderGrid() {
-      gridEl.innerHTML = "";
+    function renderGrid10() {
+      grid10El.innerHTML = "";
       let count = 0;
 
       for (let n = 1; n <= 100; n++) {
-        const isMultiple = n % currentCoef === 0;
-        if (isMultiple) count++;
+        const isMult = n % currentCoef === 0;
+        if (isMult) count++;
 
         const cell = document.createElement("button");
         cell.type = "button";
-        cell.className = "cell"
-          + (isMultiple ? " multiple" : "")
-          + (selectedNumber === n ? " selected" : "");
+        cell.className = "cell-10"
+          + (isMult ? " multiple" : "")
+          + (selectedNumber10 === n ? " selected" : "");
         cell.textContent = n;
-        cell.setAttribute("aria-label", `${n}のマス`);
-
         cell.addEventListener("click", () => {
-          selectedNumber = n;
-          renderGrid();
-          renderDetail();
+          selectedNumber10 = n;
+          renderGrid10();
+          renderDetail10();
         });
-
-        gridEl.appendChild(cell);
+        grid10El.appendChild(cell);
       }
 
-      statusEl.textContent = `えらんだ数：${currentCoef} ／ 100までの倍数：${count}こ`;
-      hintEl.textContent = hints[currentCoef] || "";
+      if (currentTab === "grid10") {
+        statusEl.textContent = `えらんだ数：${currentCoef} ／ 1〜100の倍数：${count}こ`;
+      }
     }
 
-    function renderDetail() {
-      if (selectedNumber === null) {
+    function renderDetail10() {
+      if (selectedNumber10 === null) {
         detailCardEl.className = "detail-card";
         detailTitleEl.textContent = "マスをタップしてみよう！";
-        detailBodyEl.textContent =
-          "気になる数字をタップすると、掛け算の式や、えらんだ数の倍数かどうかがここに表示されます。";
+        detailBodyEl.textContent = "気になる数字をタップすると、掛け算の式や倍数かどうかが表示されます。";
         return;
       }
-
-      const n = selectedNumber;
-      const remainder = n % currentCoef;
-      const quotient = Math.floor(n / currentCoef);
-
-      if (remainder === 0) {
+      const n = selectedNumber10;
+      const rem = n % currentCoef;
+      const quo = Math.floor(n / currentCoef);
+      if (rem === 0) {
         detailCardEl.className = "detail-card is-multiple";
         detailTitleEl.textContent = `「${n}」は ${currentCoef} の倍数です！`;
-
-        const kukuNote = quotient <= 9
-          ? `（九九の「${currentCoef}の段」の ${quotient} 番目）`
-          : `（九九をこえた ${quotient} こぶん）`;
-
-        detailBodyEl.innerHTML =
-          `<strong>${currentCoef} × ${quotient} ＝ ${n}</strong> ${kukuNote}<br>` +
-          `${currentCoef} が ${quotient} こあつまると、ちょうど ${n} になります。`;
+        detailBodyEl.innerHTML = `<strong>${currentCoef} × ${quo} ＝ ${n}</strong>（${currentCoef} が ${quo} こぶん）`;
       } else {
         detailCardEl.className = "detail-card";
         detailTitleEl.textContent = `「${n}」は ${currentCoef} の倍数ではありません`;
-
-        const nearestLower = quotient * currentCoef;
-        const nearestUpper = (quotient + 1) * currentCoef;
-        const upperText = nearestUpper <= 100
-          ? `次の ${currentCoef} の倍数は <strong>${nearestUpper}</strong>（${currentCoef} × ${quotient + 1}）です。`
-          : `100より大きい次の倍数は ${nearestUpper} です。`;
-
-        detailBodyEl.innerHTML =
-          `${currentCoef} でわると <strong>${quotient} あまり ${remainder}</strong> になります。<br>` +
-          `ちかい倍数は ${nearestLower}（${currentCoef} × ${quotient}）で、${upperText}`;
+        detailBodyEl.innerHTML = `${currentCoef} でわると <strong>${quo} あまり ${rem}</strong> になります。`;
       }
     }
 
-    buildControls();
-    renderGrid();
-    renderDetail();
+    function renderCanvas100() {
+      const size = 100;
+      const cellSize = canvas.width / size; // 5px
+      let count = 0;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let row = 0; row < size; row++) {
+        for (let col = 0; col < size; col++) {
+          const n = row * size + col + 1;
+          const isMult = n % currentCoef === 0;
+          if (isMult) count++;
+
+          ctx.fillStyle = isMult ? "#facc15" : "#ffffff";
+          ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+        }
+      }
+
+      if (selectedNumber100 !== null) {
+        const idx = selectedNumber100 - 1;
+        const r = Math.floor(idx / size);
+        const c = idx % size;
+        ctx.strokeStyle = "#2563eb";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(c * cellSize + 0.5, r * cellSize + 0.5, cellSize - 1, cellSize - 1);
+      }
+
+      if (currentTab === "grid100") {
+        statusEl.textContent = `えらんだ数：${currentCoef} ／ 1〜10,000の倍数：${count}こ`;
+      }
+    }
+
+    canvas.addEventListener("click", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const x = (e.clientX - rect.left) * scaleX;
+      const y = (e.clientY - rect.top) * scaleY;
+
+      const col = Math.min(99, Math.max(0, Math.floor(x / (canvas.width / 100))));
+      const row = Math.min(99, Math.max(0, Math.floor(y / (canvas.height / 100))));
+      const n = row * 100 + col + 1;
+      selectedNumber100 = n;
+
+      const quo = Math.floor(n / currentCoef);
+      const rem = n % currentCoef;
+      if (rem === 0) {
+        canvasInfoEl.innerHTML = `タップした場所：<strong>${n}</strong>（${row + 1}行目・${col + 1}列目） → <strong>${currentCoef} の倍数</strong>（${currentCoef} × ${quo} ＝ ${n}）`;
+      } else {
+        canvasInfoEl.innerHTML = `タップした場所：<strong>${n}</strong>（${row + 1}行目・${col + 1}列目） → ${currentCoef} でわると <strong>${quo} あまり ${rem}</strong>`;
+      }
+      renderCanvas100();
+    });
+
+    function updateAll() {
+      updateCoefButtons();
+      renderGrid10();
+      renderDetail10();
+      renderCanvas100();
+    }
+
+    buildCoefButtons();
+    updateAll();
   </script>
 </body>
 </html>
