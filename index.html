@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>100マス 倍数もようメーカー</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Meiryo", sans-serif;
+      margin: 0;
+      padding: 24px 16px 40px;
+      background: #f8fafc;
+      color: #0f172a;
+      text-align: center;
+    }
+    .container {
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 16px;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .coef-btn {
+      width: 44px;
+      height: 44px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border: 2px solid #cbd5e1;
+      border-radius: 10px;
+      background: #ffffff;
+      color: #1e293b;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .coef-btn.active {
+      background: #2563eb;
+      border-color: #1d4ed8;
+      color: #ffffff;
+    }
+    .status {
+      margin-bottom: 14px;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 6px;
+      background: #ffffff;
+      padding: 12px;
+      border-radius: 14px;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+    }
+    .cell {
+      aspect-ratio: 1 / 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      font-size: 0.95rem;
+      font-weight: 600;
+      background: #ffffff;
+      color: #475569;
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.12s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .cell:hover {
+      border-color: #94a3b8;
+    }
+    .cell.multiple {
+      background: #fef08a;
+      border-color: #eab308;
+      color: #1e3a8a;
+      font-weight: 800;
+    }
+    .cell.selected {
+      outline: 3px solid #2563eb;
+      outline-offset: 1px;
+      transform: scale(1.06);
+      z-index: 2;
+      box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
+    }
+    .detail-card {
+      margin-top: 16px;
+      background: #ffffff;
+      border: 2px solid #dbeafe;
+      border-radius: 12px;
+      padding: 14px 16px;
+      text-align: left;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+    }
+    .detail-card.is-multiple {
+      background: #fefce8;
+      border-color: #facc15;
+    }
+    .detail-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      margin-bottom: 6px;
+      color: #1e3a8a;
+    }
+    .detail-body {
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: #334155;
+    }
+    .hint {
+      margin-top: 12px;
+      font-size: 0.9rem;
+      color: #475569;
+      background: #ffffff;
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>100マス 倍数もようメーカー</h1>
+    <div class="controls" id="coefButtons" aria-label="係数の選択"></div>
+    <div class="status" id="statusText"></div>
+    <div class="grid" id="grid100" aria-label="1から100までの10×10マス"></div>
+
+    <div class="detail-card" id="detailCard">
+      <div class="detail-title" id="detailTitle">マスをタップしてみよう！</div>
+      <div class="detail-body" id="detailBody">
+        気になる数字をタップすると、掛け算の式や、えらんだ数の倍数かどうかがここに表示されます。
+      </div>
+    </div>
+
+    <div class="hint" id="hintText"></div>
+  </div>
+
+  <script>
+    const hints = {
+      1: "1の倍数はぜんぶ（100こ）！すべてのマスが光ります。",
+      2: "2の倍数はたての列が1列おきにならぶ、しましまもようです。",
+      3: "3の倍数はななめにながれるもようになります。",
+      4: "4の倍数は2の倍数よりとびとびになり、ななめやたての規則が見えてきます。",
+      5: "5の倍数は一の位が「5」と「0」のたて2列にそろいます！",
+      6: "6の倍数は2の倍数でもあり、3の倍数でもある数です。",
+      7: "7の倍数はななめにずれていく、ちょっとめずらしいもようです。",
+      8: "8の倍数は100までに12こあります。8×8＝64、8×9＝72などを探してみよう！",
+      9: "9の倍数は一の位が1ずつへり、十の位が1ずつふえる規則があります（9, 18, 27…）。",
+      10: "10の倍数は一番みぎのたて1列にまっすぐならびます！"
+    };
+
+    let currentCoef = 3;
+    let selectedNumber = null;
+
+    const coefButtonsEl = document.getElementById("coefButtons");
+    const gridEl = document.getElementById("grid100");
+    const statusEl = document.getElementById("statusText");
+    const detailCardEl = document.getElementById("detailCard");
+    const detailTitleEl = document.getElementById("detailTitle");
+    const detailBodyEl = document.getElementById("detailBody");
+    const hintEl = document.getElementById("hintText");
+
+    function buildControls() {
+      for (let i = 1; i <= 10; i++) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "coef-btn" + (i === currentCoef ? " active" : "");
+        btn.textContent = i;
+        btn.addEventListener("click", () => {
+          currentCoef = i;
+          updateActiveButton();
+          renderGrid();
+          renderDetail();
+        });
+        coefButtonsEl.appendChild(btn);
+      }
+    }
+
+    function updateActiveButton() {
+      const buttons = coefButtonsEl.querySelectorAll(".coef-btn");
+      buttons.forEach((btn, idx) => {
+        btn.classList.toggle("active", idx + 1 === currentCoef);
+      });
+    }
+
+    function renderGrid() {
+      gridEl.innerHTML = "";
+      let count = 0;
+
+      for (let n = 1; n <= 100; n++) {
+        const isMultiple = n % currentCoef === 0;
+        if (isMultiple) count++;
+
+        const cell = document.createElement("button");
+        cell.type = "button";
+        cell.className = "cell"
+          + (isMultiple ? " multiple" : "")
+          + (selectedNumber === n ? " selected" : "");
+        cell.textContent = n;
+        cell.setAttribute("aria-label", `${n}のマス`);
+
+        cell.addEventListener("click", () => {
+          selectedNumber = n;
+          renderGrid();
+          renderDetail();
+        });
+
+        gridEl.appendChild(cell);
+      }
+
+      statusEl.textContent = `えらんだ数：${currentCoef} ／ 100までの倍数：${count}こ`;
+      hintEl.textContent = hints[currentCoef] || "";
+    }
+
+    function renderDetail() {
+      if (selectedNumber === null) {
+        detailCardEl.className = "detail-card";
+        detailTitleEl.textContent = "マスをタップしてみよう！";
+        detailBodyEl.textContent =
+          "気になる数字をタップすると、掛け算の式や、えらんだ数の倍数かどうかがここに表示されます。";
+        return;
+      }
+
+      const n = selectedNumber;
+      const remainder = n % currentCoef;
+      const quotient = Math.floor(n / currentCoef);
+
+      if (remainder === 0) {
+        detailCardEl.className = "detail-card is-multiple";
+        detailTitleEl.textContent = `「${n}」は ${currentCoef} の倍数です！`;
+
+        const kukuNote = quotient <= 9
+          ? `（九九の「${currentCoef}の段」の ${quotient} 番目）`
+          : `（九九をこえた ${quotient} こぶん）`;
+
+        detailBodyEl.innerHTML =
+          `<strong>${currentCoef} × ${quotient} ＝ ${n}</strong> ${kukuNote}<br>` +
+          `${currentCoef} が ${quotient} こあつまると、ちょうど ${n} になります。`;
+      } else {
+        detailCardEl.className = "detail-card";
+        detailTitleEl.textContent = `「${n}」は ${currentCoef} の倍数ではありません`;
+
+        const nearestLower = quotient * currentCoef;
+        const nearestUpper = (quotient + 1) * currentCoef;
+        const upperText = nearestUpper <= 100
+          ? `次の ${currentCoef} の倍数は <strong>${nearestUpper}</strong>（${currentCoef} × ${quotient + 1}）です。`
+          : `100より大きい次の倍数は ${nearestUpper} です。`;
+
+        detailBodyEl.innerHTML =
+          `${currentCoef} でわると <strong>${quotient} あまり ${remainder}</strong> になります。<br>` +
+          `ちかい倍数は ${nearestLower}（${currentCoef} × ${quotient}）で、${upperText}`;
+      }
+    }
+
+    buildControls();
+    renderGrid();
+    renderDetail();
+  </script>
+</body>
+</html>
